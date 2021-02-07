@@ -84,7 +84,7 @@ class Calc():
         results_df = results_df.loc[prc_votes >= threshold, :]
         
         # dhont
-        if method=="dhont":
+        if method=="dhondt":
             # crete a df where to store the results
             seats_final = pd.DataFrame(columns = self.seats.keys(), 
                                         data = np.zeros(results_df.shape[0] * results_df.shape[1]).reshape(results_df.shape[0], results_df.shape[1]), 
@@ -108,21 +108,21 @@ class Calc():
             return self.seats_party
 
 class Sim():
-    def __init__(self, n_seats, n_parties, threshold, alpha, method):
+    def __init__(self, n_seats, n_parties, alpha):
         self.n_seats = n_seats
         self.n_parties = n_parties
-        self.threshold = threshold
         self.alpha = alpha
-        self.method = method
         
     def sample_votes(self):
         m = np.zeros(self.n_parties*len(self.n_seats)).reshape(self.n_parties, len(self.n_seats))
         for i in range(m.shape[1]):
             m[:, i] = stats.dirichlet.rvs(alpha = self.alpha, size = 1)
-        m_sim = np.round(pd.DataFrame(m) * 10000)
+        w = np.array(list(self.n_seats.values()))
+        abs_votes = 5e6 * w / w.sum()
+        m_sim = np.round(pd.DataFrame(m) * abs_votes)
         return m_sim
     
-    def sim_one(self):
+    def sim_one(self, method, threshold):
         #extract names of districts
         districts = list(self.n_seats.keys())
         n = len(districts)
@@ -134,13 +134,13 @@ class Sim():
         
         self.votes = pd.DataFrame(data = results_sim)
         self.votes.columns = list(self.n_seats.keys())
-        self.seats = Calc(n_seats = self.n_seats, results = results_sim).allocate_seats(inplace=False, threshold=self.threshold, method=self.method)
+        self.seats = Calc(n_seats = self.n_seats, results = results_sim).allocate_seats(inplace=False, threshold=threshold, method=method)
     
-    def sim_multi(self, N):
+    def sim_multi(self, N, method, threshold):
         S = np.zeros(N * self.n_parties).reshape(N,self.n_parties)
         V = np.zeros(N * self.n_parties).reshape(N,self.n_parties)
         for n in range(N):
-            self.sim_one()
+            self.sim_one(method=method, threshold=threshold)
             v = self.votes.sum(axis = 1) / np.sum(self.votes.sum(axis = 1))
             s = self.seats.sum(axis = 1) / np.sum(self.seats.sum(axis = 1))
             S[n, s.index.values] = s

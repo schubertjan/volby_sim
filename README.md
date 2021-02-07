@@ -1,2 +1,2 @@
 ## About
-This repo contains code that can be used to simulate results of elections in CZ. The purpose is to decide which allocation method achieves fair representation.
+This repo contains code that can be used to simulate results of elections in CZ. The purpose is to decide which allocation method achieves fairer representation. We look at two proposed methods - D'Hondt and Hagenbach-Bischoff. The code used in the simulation is in the python module `volby`. An implementation with comments can be found in the `simulace_voly.ipynb` notebook. 

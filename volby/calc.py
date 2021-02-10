@@ -2,6 +2,20 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
+class Quotas():
+    def __init__(self, votes, seats):
+        self.votes = votes
+        self.seats = seats
+    
+    def hb_(self):
+        return np.sum(self.votes) / (self.seats+1)
+    
+    def droop_(self):
+        return np.floor(np.sum(self.votes) / (self.seats + 1)) + 1
+    
+    def imperiali_(self):
+        return np.sum(self.votes) / (self.seats+2)
+
 class Calc():
     def __init__(self, n_seats, results):
         self.seats = n_seats
@@ -24,7 +38,7 @@ class Calc():
             seats[i] = np.sum(results_rounds_seats[i,:] == -99)
         return seats.astype(int) #return as integers
     
-    def hb_(self, results, n_seats):
+    def quota_(self, results, n_seats, quota_type):
         # create a matrix for the first round where to store results
         seats_round1 = np.zeros(results.shape[0] * n_seats.shape[0]).reshape(results.shape[0], n_seats.shape[0])
         votes_left_from_r1 = np.zeros(results.shape[0] * n_seats.shape[0]).reshape(results.shape[0], n_seats.shape[0])
@@ -33,8 +47,15 @@ class Calc():
         for i in range(seats_round1.shape[1]):
             v = results[:,i]
             s = n_seats[i]
-            #calculate hb quota
-            quota = np.sum(v) / (s+1)
+            #calculate quota
+            q = Quotas(v, s)
+            if quota_type == "hb":
+                quota = q.hb_()
+            elif quota_type=="droop":
+                quota = q.droop_()
+            elif quota_type=="imperiali":
+                quota = q.imperiali_()
+
             #allocate seats
             seats_round1[:, i] = np.floor(v / quota)
             #store votes left
@@ -48,7 +69,13 @@ class Calc():
         # total seats
         seats_total = seats_round1.sum(axis=1)
         #calculate quota
-        quota = np.sum(votes_r2) / (n_seats_r2+1)
+        q = Quotas(votes_r2, n_seats_r2)
+        if quota_type == "hb":
+            quota = q.hb_()
+        elif quota_type=="droop":
+            quota = q.droop_()
+        elif quota_type=="imperiali":
+                quota = q.imperiali_()
         # allocate seats
         seats_aux = np.floor(votes_r2 / quota)
         #update votes left
@@ -71,7 +98,7 @@ class Calc():
 
         return seats_total.astype(int)
 
-
+    
     def allocate_seats(self, threshold, method, inplace = True):
         seats_df = pd.DataFrame(index = self.seats.keys(), data = self.seats)
         results_df = pd.DataFrame(data = self.results)
@@ -98,10 +125,10 @@ class Calc():
             
             self.seats_party = seats_final
 
-        if method=="hb":
+        if (any(m_ in method for m_ in ["hb", "droop", "imperiali"])): 
             aux_seats = seats_df.iloc[0,:].to_numpy()
             aux_votes = results_df.to_numpy()
-            seats_final = self.hb_(results=aux_votes, n_seats=aux_seats)
+            seats_final = self.quota_(results=aux_votes, n_seats=aux_seats, quota_type=method)
             self.seats_party = pd.DataFrame(data=seats_final, index=results_df.index, columns=["Total"])
 
         if inplace == False:
